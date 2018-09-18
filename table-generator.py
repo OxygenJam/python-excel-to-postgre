@@ -89,8 +89,10 @@ def main():
     tableName = sys.argv[3]
     rowToCompare = int(sys.argv[4])
 
+    logPrint("Loading the worksheet...\n")
     book = xlrd.open_workbook("../Data/" + srcFileName)
     sheet = book.sheet_by_name(srcSheetName)
+    logPrint("Finished loading the worksheet!\n")
 
     query = "CREATE TABLE {}(".format(tableName)
 
@@ -166,7 +168,7 @@ def main():
         return -1
 
     try:
-        
+
         cursor.close()
 
         db.commit()

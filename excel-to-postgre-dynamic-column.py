@@ -92,12 +92,14 @@ def main():
     srcSheetName = sys.argv[2]
     tableName = sys.argv[3]
 
+    logPrint("Loading the worksheet...\n")
     book = xlrd.open_workbook("../Data/" + srcFileName)
     sheet = book.sheet_by_name(srcSheetName)
+    logPrint("Finished loading the worksheet!")
 
     # Calls the psycopg factory function to return a Connection class instance
     try:
-        
+
         db = psycopg2.connect (database = os.getenv("db"), user=os.getenv("user"), password=os.getenv("password"),host=os.getenv("host"),port=os.getenv("port"))
         cursor = db.cursor()
     except Exception as e:
@@ -176,6 +178,9 @@ def main():
         for r in range(1,sheet.nrows):
             arr = []
 
+            # Formatting info is not implemented in .xlsx
+            #print(f"Row # {r} is {sheet.rowinfo_map[]}")
+
             for c in range(0,sheet.ncols):
                 val = sheet.cell(r,c).value
 
@@ -239,8 +244,8 @@ def main():
 
     lineBreak()
 
-    logPrint(str(sheet.nrows) + "number of rows / or data inserted to table\n")
-    logPrint(str(sheet.ncols) + "number of columns / number of data per row\n\n")
+    logPrint(str(sheet.nrows) + " number of rows / or data inserted to table\n")
+    logPrint(str(sheet.ncols) + " number of columns / number of data per row\n\n")
 
     end = datetime.datetime.now()
 
