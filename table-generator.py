@@ -58,7 +58,7 @@ def lineBreak():
 # Checks that syntax or arguments have been met
 def isSyntaxCorrect(arr):
 
-    if (len(arr) < 2):
+    if (len(arr) < 4):
         return -1
 
     return 0
@@ -73,21 +73,51 @@ def isIntOrFloat(sheet_val):
     else:
             return "VARCHAR"
 
+# Removes special characters and formats column name
+def formatColumnNames(col_name):
+    col_name = re.sub(r"[/() -]","_",col_name)
+    col_name = re.sub(r"[.,]","",col_name)
+    col_name = re.sub(r"_(\w+)\1+","_",col_name)
+        
+    col_name = col_name.replace("%","pct")
+    col_name = col_name.replace("#","nbr")
+    col_name = col_name.replace("&","and")
+
+    col_name = str.lower(col_name)
+
+    return col_name
+
+# Main Function
 def main():
     start = datetime.datetime.now()
+    args = sys.argv
 
-    if(isSyntaxCorrect(sys.argv[1:])==-1):
+    if(isSyntaxCorrect(args[1:])==-1):
         
         errPrint("Please indicate the <filename> and <sheetname> in your argument\n")
 
         rPrint("e.g.\n")
         rPrint("python table-generator.py <some-file> <some-sheet> <table-name> <row-to-compare>")
-        return -1
+
+        logPrint("")
+        args.append(str(input("Please provide the name of the excel file: ")))
+
+        logPrint("")
+        args.append(str(input("Please provide the sheet name of the excel file: ")))
+
+        logPrint("")
+        args.append(str(input("Please provide the name of the table to be inserted to: ")))
+
+        logPrint("")
+        args.append(str(input("Please provide the row number(+1 from the column header) to be based in creating the table: ")))
+
+    logPrint("Arguments: \n\n")
+    bPrint(str(args) + "\n")
     
-    srcFileName = sys.argv[1] + ".xlsx"
-    srcSheetName = sys.argv[2]
-    tableName = sys.argv[3]
-    rowToCompare = int(sys.argv[4])
+    srcFileName = args[1] + ".xlsx"
+    srcSheetName = args[2]
+    tableName = args[3]
+    rowToCompare = int(args[4])
 
     logPrint("Loading the worksheet...\n")
     book = xlrd.open_workbook("../Data/" + srcFileName)
@@ -120,17 +150,8 @@ def main():
         # Replaces space, forward slash, parantheses, 
         # and dash with a single underscore
         # also removes periods and commas
-        column = re.sub(r"[/() -]","_",column)
-        column = re.sub(r"[.,]","",column)
-        column = re.sub(r"_(\w+)\1+","_",column)
+        column = formatColumnNames(column)
         
-
-        column = column.replace("%","pct")
-        column = column.replace("#","nbr")
-        column = column.replace("&","and")
-
-        column = str.lower(column)
-
         if(sheet.cell_type(1,c)!= 3):
             columntype = isIntOrFloat(sheet.cell(rowToCompare,c).value)
         else:
@@ -196,5 +217,11 @@ def main():
     return 0
 
 if __name__ == '__main__':
-    bPrint(str(sys.argv) + "\n\n")
-    main()
+    
+    code = main()
+
+    if(code==0):
+        print("Script executed with no errors...")
+    else:
+        print("Script exited with an error...")
+    input("PRESS ENTER TO EXIT")
