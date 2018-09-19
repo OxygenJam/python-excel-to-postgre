@@ -53,7 +53,7 @@ def lineBreak():
 # Checks that syntax or arguments have been met
 def isSyntaxCorrect(arr):
 
-    if (len(arr) < 2):
+    if (len(arr) < 3):
         return -1
 
     return 0
@@ -77,28 +77,56 @@ def isIntOrFloat(sheet_val):
             new_val = new_val.replace('"',"")
             return str(new_val)
 
+# Removes special characters and formats column name
+def formatColumnNames(col_name):
+    col_name = re.sub(r"[/() -]","_",col_name)
+    col_name = re.sub(r"[.,]","",col_name)
+    col_name = re.sub(r"_(\w+)\1+","_",col_name)
+        
+    col_name = col_name.replace("%","pct")
+    col_name = col_name.replace("#","nbr")
+    col_name = col_name.replace("&","and")
 
+    col_name = str.lower(col_name)
+
+    return col_name
+
+# Main Function
 def main():
     start = datetime.datetime.now()
+    args = sys.argv
 
-    if(isSyntaxCorrect(sys.argv[1:])==-1):
-        errPrint("Please indicate the <filename> and <sheetname> in your argument\n")
+    if(isSyntaxCorrect(args[1:])==-1):
+        
+        errPrint("You have ran the script with invalid or lacking arguments!\n")
 
         rPrint("e.g.\n")
         rPrint("python table-generator.py <some-file> <some-sheet> <table-name> <row-to-compare>")
-        return -1
+
+        logPrint("")
+        args.append(str(input("Please provide the name of the excel file: ")))
+
+        logPrint("")
+        args.append(str(input("Please provide the sheet name of the excel file: ")))
+
+        logPrint("")
+        args.append(str(input("Please provide the name of the table to be inserted to: ")))
+
+    logPrint("Arguments: \n\n")
+    bPrint(str(args) + "\n")
     
-    srcFileName = sys.argv[1] + ".xlsx"
-    srcSheetName = sys.argv[2]
-    tableName = sys.argv[3]
+    srcFileName = args[1] + ".xlsx"
+    srcSheetName = args[2]
+    tableName = args[3]
 
     logPrint("Loading the worksheet...\n")
-    book = xlrd.open_workbook("../Data/" + srcFileName)
-    sheet = book.sheet_by_name(srcSheetName)
-    logPrint("Finished loading the worksheet!")
 
     # Calls the psycopg factory function to return a Connection class instance
     try:
+
+        book = xlrd.open_workbook("../Data/" + srcFileName)
+        sheet = book.sheet_by_name(srcSheetName)
+        logPrint("Finished loading the worksheet!\n")
 
         db = psycopg2.connect (database = os.getenv("db"), user=os.getenv("user"), password=os.getenv("password"),host=os.getenv("host"),port=os.getenv("port"))
         cursor = db.cursor()
@@ -132,47 +160,15 @@ def main():
     # Query pre-processing
 
     # Take note table name must be same as sheetname
-    query = "INSERT INTO {}(".format(tableName)
-
-    # Retrieval of xlsx column header as db column header
-    c = 0
-    c_length = sheet.ncols
-    while(c<c_length):
-        logPrint(f"Column #  {c+1} :")
-        bPrint(f"{sheet.cell(0,c).value}")
-
-        # Special character cleansing
-        column = str(sheet.cell(0,c).value)
-
-        # Replaces space, forward slash, parantheses, 
-        # and dash with a single underscore
-        # also removes periods and commas
-        column = re.sub(r"[/() -]","_",column)
-        column = re.sub(r"[.,]","",column)
-        column = re.sub(r"_(\w+)\1+","_",column)
-        
-
-        column = column.replace("%","pct")
-        column = column.replace("#","nbr")
-        column = column.replace("&","and")
-
-        column = str.lower(column)
-
-        query += "{} ,".format(column) 
-
-        c += 1
-
-    # Preparation for string interpolation
-    c=0
-    query += "date_file_uploaded, file_name) VALUES {}"
+    query = "INSERT INTO {} VALUES".format(tableName)
+    query += " {}"
 
     logPrint("Finished preparing query\n")
     lineBreak()
     print("QUERY STRING: \n\n")
     print(colored(query,'green'))
     
-
-
+    data_inserted = 0
     with db.cursor() as cursor:
 
         for r in range(1,sheet.nrows):
@@ -207,6 +203,7 @@ def main():
 
             try:
 
+                data_inserted += 1
                 cursor.execute(formatted_query)
             except Exception as e:
 
@@ -244,7 +241,7 @@ def main():
 
     lineBreak()
 
-    logPrint(str(sheet.nrows) + " number of rows / or data inserted to table\n")
+    logPrint(str(data_inserted) + " number of rows / or data inserted to table\n")
     logPrint(str(sheet.ncols) + " number of columns / number of data per row\n\n")
 
     end = datetime.datetime.now()
@@ -256,9 +253,14 @@ def main():
 
     logPrint(f"Time elapsed: {elapsed[0]} minutes, {elapsed[1]} seconds, and {elapsed[2]} milleseconds")
     lineBreak()
-    
+
     return 0
 
 if __name__ == '__main__':
-    bPrint(str(sys.argv) + "\n\n")
-    main()
+    code = main()
+
+    if(code==0):
+        print("Script executed with no errors...")
+    else:
+        print("Script exited with an error...")
+    input("PRESS ENTER TO EXIT")
